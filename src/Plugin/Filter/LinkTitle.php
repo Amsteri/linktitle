@@ -79,10 +79,11 @@ class LinkTitle extends FilterBase {
    */
   public function linktitle_get_remotetitle($url, $bytes = 5000) {
     $innertitle = '';
+    $dat = '';
     $fp = $this->file_get_contents_curl($url);
     if ($fp) {
       // if the url is not available $dat wil be empty
-      if (preg_match('|<title>[[:space:]]*(.*)[[:space:]]*</title>|Uis', $dat, $match )) {
+      if (preg_match('|<title>[[:space:]]*(.*)[[:space:]]*</title>|Uis', $fp, $match )) {
         $innertitle = $match[1];
       }
     }
@@ -129,3 +130,4 @@ class LinkTitle extends FilterBase {
     return $data;
   }
 }
+

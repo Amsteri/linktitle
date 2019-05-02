@@ -1,0 +1,6 @@
+name: Link Title
+description: Adds an automated title-attribute to links.
+package: Input filters
+
+type: module
+core: 8.x

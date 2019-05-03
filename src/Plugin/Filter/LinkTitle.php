@@ -33,6 +33,7 @@ class LinkTitle extends FilterBase {
       '#type' => 'textfield',
       '#title' => $this->t('Maximum number of bytes read'),
       '#default_value' => $this->settings['linktitle_maxread_bytes'],
+      '#description' => '',
       '#maxlength' => 1024,
       '#size' => 250,
     ];
@@ -41,6 +42,7 @@ class LinkTitle extends FilterBase {
       '#type' => 'textfield',
       '#title' => $this->t('Maximum time to connect to the page that is referred to.'),
       '#default_value' => $this->settings['linktitle_timeout'],
+      '#description' => '',
       '#maxlength' => 1024,
       '#size' => 250,
     ];
@@ -59,7 +61,7 @@ class LinkTitle extends FilterBase {
     $pattern = '%<a([^>]*?href="([^"]+?)"[^>]*?)>%i';
 
     $result = new FilterProcessResult($text);
-    $text = preg_replace_callback($pattern, array($this, '_linktitle_filter_text_process'), $text);
+    $text = preg_replace_callback($pattern, array($this, 'filterTextProcess'), $text);
     $result->setProcessedText($text);
     return $result;
   }
@@ -75,15 +77,16 @@ class LinkTitle extends FilterBase {
   }
 
   /**
-   * Callback for linktitle_get_remotetitle().
+   * Callback for getRemoteTitle().
    */
-  public function linktitle_get_remotetitle($url, $bytes = 5000) {
+  public function getRemoteTitle($url) {;
     $innertitle = '';
-    $dat = '';
-    $fp = $this->file_get_contents_curl($url);
-    if ($fp) {
+    $client = \Drupal::httpClient();
+    $request = $client->request('GET', $url);
+    $response = $request->getBody()->getContents();
+    if ($response) {
       // if the url is not available $dat wil be empty
-      if (preg_match('|<title>[[:space:]]*(.*)[[:space:]]*</title>|Uis', $fp, $match )) {
+      if (preg_match('|<title>[[:space:]]*(.*)[[:space:]]*</title>|Uis', $response, $match )) {
         $innertitle = $match[1];
       }
     }
@@ -93,16 +96,15 @@ class LinkTitle extends FilterBase {
   /**
    * Callback for _linktitle_filter_process().
    */
-  public function _linktitle_filter_text_process($matches) {
+  public function filterTextProcess($matches) {
     global $_linktitle_setting_maxread;
     if (strpos($matches[1], 'title=') == FALSE) {
-      $pagetitle = $this->linktitle_get_remotetitle($matches[2], $_linktitle_setting_maxread);
+      $pagetitle = $this->getRemoteTitle($matches[2], $_linktitle_setting_maxread);
       if (empty($pagetitle)) {
         return $matches[0];
       }
       else {
         // make sure the inserted page title is plain text
-        // $insert_title = 'title="'.check_plain($pagetitle).'"';
         $insert_title = 'title="' . $pagetitle . '"';
         return substr_replace($matches[0], $insert_title, -1, -1);
       }
@@ -111,23 +113,4 @@ class LinkTitle extends FilterBase {
       return $matches[0];
     }
   }
-
-  /**
-   * Callback for file_get_contents_curl().
-   */
-  public function file_get_contents_curl($url)
-  {
-    $ch = curl_init();
-
-    curl_setopt($ch, CURLOPT_HEADER, 0);
-    curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
-    curl_setopt($ch, CURLOPT_URL, $url);
-    curl_setopt($ch, CURLOPT_FOLLOWLOCATION, 1);
-
-    $data = curl_exec($ch);
-    curl_close($ch);
-
-    return $data;
-  }
 }
-
